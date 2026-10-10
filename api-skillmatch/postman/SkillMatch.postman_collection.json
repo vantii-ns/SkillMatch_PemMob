@@ -1,0 +1,979 @@
+{
+  "info": {
+    "name": "SkillMatch API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Jalankan folder 0 (Login) lebih dulu agar variabel token terisi otomatis."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "id_tim",
+      "value": "1"
+    },
+    {
+      "key": "id_undangan",
+      "value": "1"
+    },
+    {
+      "key": "id_users",
+      "value": "2"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Auth (M1)",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Dina Mahasiswa\",\n  \"email\": \"dina@contoh.com\",\n  \"password\": \"password123\",\n  \"peran_utama\": \"developer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('token', j.token);",
+                  "pm.test(\"status sukses\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register gagal (email salah) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"X\",\n  \"email\": \"salah\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Login (Andi, akun contoh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"andi@contoh.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('token', j.token);",
+                  "pm.test(\"status sukses\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login salah -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"andi@contoh.com\",\n  \"password\": \"salah\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Profil saya",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Profil, Skill & Pencarian (M1)",
+      "item": [
+        {
+          "name": "Daftar skill",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/skills",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "skills"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Statistik skill (agregasi)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/skills/statistik",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "skills",
+                "statistik"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Ubah profil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Andi Pratama\",\n  \"bio\": \"Backend & mobile\",\n  \"ketersediaan\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set tag skill",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/skills",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "skills"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skill_ids\": [\n    1,\n    14,\n    16\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cari kandidat (filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/search?skill=Figma&peran=desainer&tersedia=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "skill",
+                  "value": "Figma"
+                },
+                {
+                  "key": "peran",
+                  "value": "desainer"
+                },
+                {
+                  "key": "tersedia",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cari hanya skill terverifikasi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/search?skill=JavaScript&verified=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "skill",
+                  "value": "JavaScript"
+                },
+                {
+                  "key": "verified",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Profil kandidat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "2"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Profil id tidak ada -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "99999"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Notifikasi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifikasi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifikasi"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Tandai semua dibaca",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifikasi/baca-semua",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifikasi",
+                "baca-semua"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Verifikasi Portofolio (M2)",
+      "item": [
+        {
+          "name": "Kode bukti GitHub",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/github/challenge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "github",
+                "challenge"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Hubungkan GitHub",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/github",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "github"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"octocat\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sinkron ulang GitHub",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/github/sinkron",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "github",
+                "sinkron"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Ringkasan GitHub (US-07)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/github",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "github"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Hubungkan Figma",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/figma",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "figma"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"figd_xxx\",\n  \"file_keys\": [\n    \"KEY_FILE_FIGMA\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Semua portofolio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Putuskan GitHub -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/portofolio/github",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portofolio",
+                "github"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tim, Undangan & Diskusi (M3)",
+      "item": [
+        {
+          "name": "Buat tim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tim",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama_tim\": \"Tim Lomba\",\n  \"deskripsi\": \"Cari desainer\",\n  \"kebutuhan_skill\": [\n    \"Figma\",\n    \"UI/UX Design\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json(); if (j.id_tim) pm.collectionVariables.set('id_tim', j.id_tim);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tim saya",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Detail tim",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Ubah tim",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama_tim\": \"Tim Lomba Nasional\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Kirim undangan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/undangan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "undangan"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_users\": 2,\n  \"peran_ditawarkan\": \"UI Designer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Undangan masuk (login sbg penerima)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/undangan?status=menunggu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "undangan"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "menunggu"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Terima undangan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/undangan/{{id_undangan}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "undangan",
+                "{{id_undangan}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"diterima\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Tetapkan peran anggota",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/anggota/{{id_users}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "anggota",
+                "{{id_users}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"peran\": \"Lead UI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Kirim pesan diskusi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/diskusi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "diskusi"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isi_pesan\": \"Halo tim!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Baca diskusi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/diskusi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "diskusi"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Pesan baru (polling)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/diskusi?setelah_id=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "diskusi"
+              ],
+              "query": [
+                {
+                  "key": "setelah_id",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Keluarkan anggota -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}/anggota/{{id_users}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}",
+                "anggota",
+                "{{id_users}}"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Hapus tim -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tim/{{id_tim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tim",
+                "{{id_tim}}"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
