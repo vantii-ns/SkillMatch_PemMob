@@ -11,7 +11,13 @@ export const tangani = (fn) => async (req, res, next) => {
     if (e instanceof ErrorHttp) return res.status(e.status).json({ pesan: e.message });
     if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ pesan: 'Data sudah ada' });
     if (e.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ pesan: 'Data rujukan tidak ada' });
-    console.error(e);
+    // Security: di production, sembunyikan detail error internal
+    if (process.env.NODE_ENV === 'production') {
+      console.error(`[${req?.requestId || '-'}] Internal error: ${e.message}`);
+    } else {
+      console.error(e);
+    }
     res.status(500).json({ pesan: 'Operasi database gagal' });
   }
 };
+

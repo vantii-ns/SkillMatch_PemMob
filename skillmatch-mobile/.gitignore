@@ -31,7 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+# PENTING: .env berisi IP server — jangan di-commit!
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
