@@ -1,57 +1,179 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './AuthContext';
-import { c } from './theme';
+import { c, radius } from './theme';
+import { IconBox, IconSearch, IconUser, IconUsers, SkillMatchLogo } from './icons';
 import { LoginScreen, RegisterScreen } from './screens/Auth';
 import { CariScreen, KandidatDetailScreen, UndangScreen } from './screens/Cari';
 import { DiskusiScreen, TimDetailScreen, TimFormScreen, TimListScreen } from './screens/Tim';
-import { NotifikasiScreen, UndanganScreen } from './screens/Kotak';
+import { KotakScreen } from './screens/Kotak';
 import { EditProfilScreen, PilihSkillScreen, PortofolioScreen, ProfilScreen } from './screens/Profil';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const header = {
-  headerStyle: { backgroundColor: c.primer }, headerTintColor: c.putih, headerTitleStyle: { fontWeight: '700' },
-  contentStyle: { backgroundColor: c.bg },
-};
-const ikon = (emoji) => ({ tabBarIcon: () => <Text style={{ fontSize: 18 }}>{emoji}</Text> });
+// Custom Bottom Tab Bar yang persis mengikuti desain Figma
+function CustomTabBar({ state, descriptors, navigation }) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: c.putih,
+        borderTopWidth: 1,
+        borderColor: c.garis,
+        paddingBottom: Math.max(insets.bottom, 10),
+        paddingTop: 10,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      }}
+    >
+      {state.routes.map((route, index) => {
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        let label = route.name;
+        let renderIcon = (color) => null;
+
+        if (route.name === 'Cari') {
+          label = 'Cari';
+          renderIcon = (color) => <IconSearch size={20} color={color} />;
+        } else if (route.name === 'Tim') {
+          label = 'Tim';
+          renderIcon = (color) => <IconUsers size={20} color={color} />;
+        } else if (route.name === 'Kotak') {
+          label = 'Kotak';
+          renderIcon = (color) => <IconBox size={20} color={color} />;
+        } else if (route.name === 'Profil') {
+          label = 'Profil';
+          renderIcon = (color) => <IconUser size={20} color={color} />;
+        }
+
+        if (isFocused) {
+          // Tab aktif: kapsul/pil burgundy dengan teks dan ikon putih (Figma)
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: true }}
+              onPress={onPress}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: c.primer,
+                paddingVertical: 10,
+                paddingHorizontal: 20,
+                borderRadius: radius.pil,
+              }}
+            >
+              {renderIcon(c.putih)}
+              <Text style={{ color: c.putih, fontSize: 14, fontWeight: '700' }}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        }
+
+        // Tab tidak aktif: ikon di atas, label di bawah
+        return (
+          <Pressable
+            key={route.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: false }}
+            onPress={onPress}
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              minWidth: 50,
+            }}
+          >
+            {renderIcon(c.primer)}
+            <Text style={{ color: c.primer, fontSize: 11.5, fontWeight: '600', marginTop: 4 }}>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function Tabs() {
   return (
-    <Tab.Navigator screenOptions={{ ...header, tabBarActiveTintColor: c.primer }}>
-      <Tab.Screen name="Cari" component={CariScreen} options={{ title: 'Cari Rekan', ...ikon('🔎') }} />
-      <Tab.Screen name="Tim" component={TimListScreen} options={{ title: 'Tim Saya', ...ikon('👥') }} />
-      <Tab.Screen name="Undangan" component={UndanganScreen} options={ikon('✉️')} />
-      <Tab.Screen name="Notifikasi" component={NotifikasiScreen} options={ikon('🔔')} />
-      <Tab.Screen name="Profil" component={ProfilScreen} options={{ title: 'Profil Saya', ...ikon('👤') }} />
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Cari" component={CariScreen} />
+      <Tab.Screen name="Tim" component={TimListScreen} />
+      <Tab.Screen name="Kotak" component={KotakScreen} />
+      <Tab.Screen name="Profil" component={ProfilScreen} />
     </Tab.Navigator>
   );
 }
 
 export default function Navigasi() {
   const { token, booting } = useAuth();
-  if (booting) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator accessibilityLabel="Memuat" /></View>;
+
+  if (booting) {
+    // Splash screen persis seperti logo.pdf
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: c.bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <SkillMatchLogo width={260} height={220} />
+        <ActivityIndicator size="small" color={c.primer} style={{ marginTop: 28 }} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       {token ? (
-        <Stack.Navigator screenOptions={header}>
-          <Stack.Screen name="Utama" component={Tabs} options={{ headerShown: false }} />
-          <Stack.Screen name="KandidatDetail" component={KandidatDetailScreen} options={({ route }) => ({ title: route.params?.nama || 'Profil Kandidat' })} />
-          <Stack.Screen name="Undang" component={UndangScreen} options={{ title: 'Undang ke Tim' }} />
-          <Stack.Screen name="TimForm" component={TimFormScreen} options={({ route }) => ({ title: route.params?.tim ? 'Ubah Tim' : 'Buat Tim' })} />
-          <Stack.Screen name="TimDetail" component={TimDetailScreen} options={({ route }) => ({ title: route.params?.nama || 'Detail Tim' })} />
-          <Stack.Screen name="Diskusi" component={DiskusiScreen} options={({ route }) => ({ title: `Diskusi: ${route.params?.nama || ''}` })} />
-          <Stack.Screen name="EditProfil" component={EditProfilScreen} options={{ title: 'Ubah Profil' }} />
-          <Stack.Screen name="PilihSkill" component={PilihSkillScreen} options={{ title: 'Pilih Skill' }} />
-          <Stack.Screen name="Portofolio" component={PortofolioScreen} options={{ title: 'Portofolio' }} />
+        <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+          <Stack.Screen name="Utama" component={Tabs} />
+          <Stack.Screen name="KandidatDetail" component={KandidatDetailScreen} />
+          <Stack.Screen name="Undang" component={UndangScreen} />
+          <Stack.Screen name="TimForm" component={TimFormScreen} />
+          <Stack.Screen name="TimDetail" component={TimDetailScreen} />
+          <Stack.Screen name="Diskusi" component={DiskusiScreen} />
+          <Stack.Screen name="EditProfil" component={EditProfilScreen} />
+          <Stack.Screen name="PilihSkill" component={PilihSkillScreen} />
+          <Stack.Screen name="Portofolio" component={PortofolioScreen} />
         </Stack.Navigator>
       ) : (
-        <Stack.Navigator screenOptions={header}>
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Masuk' }} />
-          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Daftar' }} />
+        <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

@@ -1,47 +1,157 @@
-// F1, F2, F3 — profil, tag skill, hubungkan GitHub & Figma
+// F1, F2, F3 — profil, tag skill, hubungkan GitHub & Figma (Figma Profil)
 import { useState } from 'react';
-import { Alert, Switch, Text, TextInput, View } from 'react-native';
-import { Chip, Galat, Halaman, Kartu, SkillChips, Status, Tombol } from '../components';
+import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { AvatarInitials, Chip, Galat, Halaman, HeaderLayar, InfoBox, Kartu, SkillChips, Status, Tombol } from '../components';
 import { PeranPilihan } from './Auth';
 import { useAuth } from '../AuthContext';
 import { useAksi, useData } from '../hooks';
 import { api } from '../api';
 import { labelPeran, tanggalLokal } from '../helpers';
-import { s } from '../theme';
+import { c, font, radius, s } from '../theme';
+import { IconCheck, IconChevronRight, IconClock, IconEdit, IconLink, IconLogOut } from '../icons';
 
 export function ProfilScreen({ navigation }) {
   const { logout } = useAuth();
   const d = useData('saya', () => api.me());
+  const tim = useData('tim', () => api.timSaya());
   const p = d.data;
-  const keluar = () => Alert.alert('Keluar', 'Keluar dari akun ini?',
-    [{ text: 'Batal', style: 'cancel' }, { text: 'Keluar', style: 'destructive', onPress: () => logout() }]);
+
+  const keluar = () =>
+    Alert.alert('Keluar akun', 'Keluar dari akun SkillMatch kamu?', [
+      { text: 'Batal', style: 'cancel' },
+      { text: 'Keluar', style: 'destructive', onPress: () => logout() },
+    ]);
+
+  const timList = tim.data || [];
+  const ketuaCount = timList.filter((t) => t.peran_saya === 'Ketua').length;
+  const ringkasanTim = timList.length > 0
+    ? `${timList.length} tim aktif · ${ketuaCount} sebagai Ketua`
+    : 'Belum bergabung di tim';
+
+  const namaTimTergabung = timList.map((t) => t.nama_tim).join(' dan ') || 'Belum ada tim';
 
   return (
-    <Halaman onRefresh={d.reload} refreshing={d.loading && !!p}>
+    <Halaman onRefresh={() => { d.reload(); tim.reload(); }} refreshing={d.loading && !!p}>
+      <HeaderLayar judul="Profil saya" />
       <Status loading={d.loading} error={d.error} stale={d.stale} adaData={!!p} onRetry={d.reload} />
+
       {p && (
-        <>
-          <Text style={s.judul}>{p.nama}</Text>
-          <Text style={s.redup}>{p.email}</Text>
-          <Text style={s.redup}>{labelPeran(p.peran_utama)} • {p.ketersediaan ? 'Tersedia untuk tim' : 'Tidak tersedia'}</Text>
-          {!!p.bio && <Text style={[s.teks, { marginTop: 8 }]}>{p.bio}</Text>}
+        <View style={{ marginTop: 4 }}>
+          {/* Header Profil Ringkas (Figma Profil) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+            <AvatarInitials nama={p.nama} size={64} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.judulSerif, { fontSize: 24, marginBottom: 2 }]}>{p.nama}</Text>
+              <Text style={[s.redup, { fontSize: 15 }]}>{labelPeran(p.peran_utama)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <IconClock size={14} color={p.ketersediaan ? '#15803D' : c.redup} />
+                <Text style={{ fontSize: 13.5, color: p.ketersediaan ? '#15803D' : c.redup, fontWeight: '600' }}>
+                  {p.ketersediaan ? 'Tersedia untuk proyek' : 'Sedang tidak tersedia'}
+                </Text>
+              </View>
+            </View>
+          </View>
 
-          <Text style={s.sub}>Skill saya</Text>
-          <SkillChips skills={p.skills} />
-          <Text style={[s.redup, { marginTop: 6 }]}>Skill bertanda ✓ terverifikasi otomatis dari GitHub/Figma.</Text>
+          {/* Subtitle Ringkasan Peran Utama */}
+          {timList.length > 0 && (
+            <Text style={[s.subKategori, { marginBottom: 12 }]}>
+              {ketuaCount > 0 ? `KETUA · ${timList.find((t) => t.peran_saya === 'Ketua')?.nama_tim || ''}` : 'ANGGOTA TIM'}
+            </Text>
+          )}
 
-          <Text style={s.sub}>Portofolio</Text>
-          <Kartu>
-            <Text style={s.teks}>GitHub: {p.github ? `@${p.github.username} (${p.github.jumlah_repo} repo, ${p.github.jumlah_commit} commit)` : 'belum terhubung'}</Text>
-            <Text style={s.teks}>Figma: {p.figma ? `@${p.figma.username_figma} (${p.figma.jumlah_proyek} file)` : 'belum terhubung'}</Text>
+          {/* Kartu: Tentang Saya */}
+          <Kartu style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: c.teks, marginBottom: 6 }}>
+              Tentang saya
+            </Text>
+            <Text style={[s.teks, { lineHeight: 22 }]}>
+              {p.bio || 'Belum ada bio singkat. Jelaskan minat dan keahlianmu.'}
+            </Text>
+
+            <View style={s.garisPemisah} />
+
+            <Tombol
+              title="Ubah profil"
+              variant="garis"
+              icon={<IconEdit size={16} color={c.primer} />}
+              onPress={() => navigation.navigate('EditProfil', { profil: p })}
+            />
           </Kartu>
 
-          <Tombol title="Ubah profil" onPress={() => navigation.navigate('EditProfil', { profil: p })} />
-          <Tombol title="Pilih skill" variant="garis" onPress={() => navigation.navigate('PilihSkill', { profil: p })} />
-          <Tombol title="Hubungkan GitHub / Figma" variant="garis" onPress={() => navigation.navigate('Portofolio')} />
-        </>
+          {/* Bagian Skill */}
+          <View style={[s.pemisah, { marginBottom: 10, paddingHorizontal: 4 }]}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: c.teks }}>Skill</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('PilihSkill', { profil: p })}
+            >
+              <Text style={{ fontSize: 14.5, fontWeight: '700', color: c.primer }}>Pilih skill</Text>
+            </Pressable>
+          </View>
+
+          <Kartu style={{ marginBottom: 16 }}>
+            <SkillChips skills={p.skills} />
+            <Text style={[s.redup, { fontSize: 12, marginTop: 10, lineHeight: 18 }]}>
+              ✓ Burgundy: ada bukti portofolio.{'\n'}
+              Garis: diisi sendiri. Bukti bukan jaminan penguasaan.
+            </Text>
+          </Kartu>
+
+          {/* Bagian Portofolio */}
+          <Text style={{ fontSize: 17, fontWeight: '700', color: c.teks, marginBottom: 10, paddingHorizontal: 4 }}>
+            Portofolio
+          </Text>
+
+          <Kartu style={{ marginBottom: 16, padding: 16 }}>
+            <Pressable
+              onPress={() => navigation.navigate('Portofolio')}
+              style={s.pemisah}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: c.primer }}>Kelola portofolio</Text>
+                <Text style={[s.redup, { marginTop: 4, fontSize: 13 }]}>
+                  {p.github ? 'GitHub terhubung' : 'GitHub belum terhubung'} · {p.figma ? 'Figma terhubung' : 'Figma belum terhubung'}
+                </Text>
+              </View>
+              <IconChevronRight size={18} color={c.primer} />
+            </Pressable>
+
+            <View style={s.garisPemisah} />
+
+            <Pressable
+              onPress={() => navigation.navigate('Portofolio')}
+              style={s.pemisah}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: c.teks }}>Hubungkan GitHub / Figma</Text>
+                <Text style={[s.redup, { marginTop: 2, fontSize: 13 }]}>
+                  Tampilkan ringkasan karya sebagai bukti skill.
+                </Text>
+              </View>
+              <IconLink size={18} color={c.primer} />
+            </Pressable>
+          </Kartu>
+
+          {/* Bagian Ruang Kolaborasi */}
+          <Text style={{ fontSize: 17, fontWeight: '700', color: c.teks, marginBottom: 10, paddingHorizontal: 4 }}>
+            Ruang kolaborasi
+          </Text>
+
+          <Kartu style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: c.teks }}>{ringkasanTim}</Text>
+            <Text style={[s.redup, { marginTop: 4, fontSize: 13.5 }]}>{namaTimTergabung}</Text>
+          </Kartu>
+
+          {/* Tombol Keluar */}
+          <Tombol
+            title="Keluar"
+            variant="garis"
+            icon={<IconLogOut size={18} color={c.primer} />}
+            onPress={keluar}
+            style={{ borderColor: c.garisGelap }}
+          />
+        </View>
       )}
-      <Tombol title="Keluar" variant="bahaya" onPress={keluar} />
     </Halaman>
   );
 }
@@ -67,19 +177,56 @@ export function EditProfilScreen({ route, navigation }) {
 
   return (
     <Halaman>
-      <Text style={s.label}>Nama</Text>
-      <TextInput style={s.input} value={nama} onChangeText={setNama} maxLength={100} editable={!busy} accessibilityLabel="Nama" />
-      <Text style={s.label}>Bio singkat</Text>
-      <TextInput style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]} value={bio} onChangeText={setBio}
-        multiline maxLength={500} editable={!busy} accessibilityLabel="Bio" placeholder="Pengalaman, minat lomba, dsb." />
-      <Text style={s.label}>Peran utama</Text>
-      <PeranPilihan nilai={peran} onPilih={setPeran} disabled={busy} />
-      <View style={[s.pemisah, { marginTop: 16 }]}>
-        <Text style={s.teks}>Tersedia untuk bergabung tim</Text>
-        <Switch value={tersedia} onValueChange={setTersedia} disabled={busy} accessibilityLabel="Tersedia untuk bergabung tim" />
+      <HeaderLayar judul="Ubah profil" onBack={() => navigation.goBack()} />
+      <View style={{ marginTop: 8 }}>
+        <Text style={s.label}>Nama lengkap</Text>
+        <TextInput
+          style={s.input}
+          value={nama}
+          onChangeText={setNama}
+          maxLength={100}
+          editable={!busy}
+          placeholder="Nama kamu"
+          placeholderTextColor="#8F817B"
+          accessibilityLabel="Nama"
+        />
+
+        <Text style={s.label}>Bio singkat</Text>
+        <TextInput
+          style={[s.input, { minHeight: 90, textAlignVertical: 'top' }]}
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          maxLength={500}
+          editable={!busy}
+          accessibilityLabel="Bio"
+          placeholder="Pengalaman, minat lomba, atau bidang karya yang disukai..."
+          placeholderTextColor="#8F817B"
+        />
+
+        <Text style={s.label}>Peran utama</Text>
+        <PeranPilihan nilai={peran} onPilih={setPeran} disabled={busy} />
+
+        <View style={[s.kartu, s.pemisah, { marginTop: 18, paddingVertical: 12 }]}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: c.teks }}>Tersedia untuk proyek</Text>
+            <Text style={[s.redup, { fontSize: 12.5, marginTop: 2 }]}>
+              Izinkan pencari tim melihatmu di hasil pencarian.
+            </Text>
+          </View>
+          <Switch
+            value={tersedia}
+            onValueChange={setTersedia}
+            disabled={busy}
+            trackColor={{ false: '#D1C4B5', true: c.primer }}
+            thumbColor={c.putih}
+            accessibilityLabel="Tersedia untuk proyek"
+          />
+        </View>
+
+        <Galat pesan={error} />
+        <Tombol title={busy ? 'Menyimpan...' : 'Simpan profil'} onPress={simpan} disabled={busy} />
       </View>
-      <Galat pesan={error} />
-      <Tombol title={busy ? 'Menyimpan...' : 'Simpan'} onPress={simpan} disabled={busy} />
     </Halaman>
   );
 }
@@ -94,104 +241,165 @@ export function PilihSkillScreen({ route, navigation }) {
   const togel = (id) => setDipilih((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]));
 
   async function simpan() {
-    const ok = await jalankan(async () => { await api.setSkills(dipilih); return true; });
+    const ok = await jalankan(async () => {
+      await api.setSkills(dipilih);
+      return true;
+    });
     if (ok) navigation.goBack();
   }
 
+  const dataSkills = skills.data || [];
+
   return (
     <Halaman>
-      <Status loading={skills.loading} error={skills.error} stale={skills.stale} adaData={!!skills.data} onRetry={skills.reload} />
-      {skills.data && KATEGORI.map(([kat, label]) => (
-        <View key={kat}>
-          <Text style={s.sub}>{label}</Text>
-          <View style={s.baris}>
-            {skills.data.filter((k) => k.kategori === kat).map((k) => (
-              <Chip key={k.id} teks={k.nama} aktif={dipilih.includes(k.id)} onPress={() => togel(k.id)} disabled={busy} />
-            ))}
+      <HeaderLayar
+        judul="Pilih skill"
+        onBack={() => navigation.goBack()}
+        subKategori="KEAHLIAN & SPESIALISASI"
+        keterangan={`${dipilih.length} skill dipilih.`}
+      />
+      <Status loading={skills.loading} error={skills.error} adaData={!!skills.data} onRetry={skills.reload} />
+
+      {KATEGORI.map(([kat, label]) => {
+        const itemKat = dataSkills.filter((s) => s.kategori === kat);
+        if (!itemKat.length) return null;
+        return (
+          <View key={kat} style={{ marginTop: 14 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: c.teks, marginBottom: 8 }}>{label}</Text>
+            <View style={s.baris}>
+              {itemKat.map((k) => {
+                const aktif = dipilih.includes(k.id);
+                return (
+                  <Chip
+                    key={k.id}
+                    teks={k.nama}
+                    aktif={aktif}
+                    onPress={() => togel(k.id)}
+                    disabled={busy}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
-      ))}
-      <Text style={[s.redup, { marginTop: 12 }]}>Hubungkan GitHub/Figma agar skill Anda otomatis bertanda terverifikasi ✓.</Text>
+        );
+      })}
+
+      <InfoBox
+        style={{ marginTop: 20 }}
+        teks="Skill yang cocok dengan repositori GitHub atau file Figma kamu akan terverifikasi otomatis dengan centang ✓."
+      />
+
       <Galat pesan={error} />
-      <Tombol title={busy ? 'Menyimpan...' : `Simpan (${dipilih.length} skill)`} onPress={simpan} disabled={busy || !skills.data} />
+      <Tombol title={busy ? 'Menyimpan...' : 'Simpan skill'} onPress={simpan} disabled={busy} />
     </Halaman>
   );
 }
 
-// M2 — verifikasi portofolio otomatis
-export function PortofolioScreen() {
+export function PortofolioScreen({ navigation }) {
   const d = useData('portofolio', () => api.portofolio());
+  const chal = useData('challenge', () => api.githubChallenge());
   const [username, setUsername] = useState('');
-  const [kode, setKode] = useState(null);
   const [tokenFigma, setTokenFigma] = useState('');
-  const [fileKeys, setFileKeys] = useState('');
-  const { busy, error, setError, jalankan } = useAksi();
+  const [keysFigma, setKeysFigma] = useState('');
+  const { busy, error, jalankan } = useAksi();
   const p = d.data;
-
-  const aksi = (fn, sukses) => jalankan(async () => { await fn(); if (sukses) Alert.alert('Berhasil', sukses); await d.reload(); });
-  const konfirmasi = (judul, fn) => Alert.alert(judul, 'Skill terverifikasi dari akun ini akan dihitung ulang.',
-    [{ text: 'Batal', style: 'cancel' }, { text: 'Putuskan', style: 'destructive', onPress: () => aksi(fn) }]);
 
   return (
     <Halaman onRefresh={d.reload} refreshing={d.loading && !!p}>
+      <HeaderLayar judul="Portofolio" onBack={() => navigation.goBack()} />
       <Status loading={d.loading} error={d.error} stale={d.stale} adaData={!!p} onRetry={d.reload} />
-      <Galat pesan={error} />
-      {p && (
-        <>
-          <Text style={s.sub}>GitHub (untuk developer)</Text>
-          {p.github ? (
-            <Kartu>
-              <Text style={s.kartuJudul}>@{p.github.username}</Text>
-              <Text style={s.teks}>{p.github.jumlah_repo} repositori • {p.github.jumlah_commit} commit</Text>
-              <Text style={s.redup}>Bahasa: {(p.github.top_languages || []).join(', ') || '-'}</Text>
-              <Text style={s.redup}>Diperbarui {tanggalLokal(p.github.diperbarui_pada)}</Text>
-              <Tombol title="Sinkronkan ulang" disabled={busy} onPress={() => aksi(() => api.githubSinkron(), 'Data GitHub diperbarui.')} />
-              <Tombol title="Putuskan" variant="bahaya" disabled={busy} onPress={() => konfirmasi('Putuskan GitHub', () => api.githubPutus())} />
-            </Kartu>
-          ) : (
-            <Kartu>
-              <Text style={s.teks}>Tempel kode verifikasi di Bio GitHub Anda agar terbukti akun milik Anda, lalu hubungkan.</Text>
-              <Tombol title="Tampilkan kode verifikasi" variant="garis" disabled={busy}
-                onPress={() => jalankan(async () => setKode(await api.githubChallenge()))} />
-              {kode && <Text selectable style={[s.kartuJudul, { color: '#0F766E' }]}>{kode.wajib ? kode.kode : 'Kode tidak diperlukan (mode pengembangan)'}</Text>}
-              <Text style={s.label}>Username GitHub</Text>
-              <TextInput style={s.input} value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false}
-                editable={!busy} placeholder="contoh: octocat" accessibilityLabel="Username GitHub" />
-              <Tombol title={busy ? 'Memproses...' : 'Hubungkan GitHub'} disabled={busy}
-                onPress={() => {
-                  if (!username.trim()) { setError('Username GitHub wajib diisi'); return; }
-                  aksi(() => api.githubHubungkan(username.trim()), 'GitHub terhubung.');
-                }} />
-            </Kartu>
-          )}
 
-          <Text style={s.sub}>Figma (untuk desainer)</Text>
-          {p.figma ? (
-            <Kartu>
-              <Text style={s.kartuJudul}>@{p.figma.username_figma}</Text>
-              <Text style={s.teks}>{p.figma.jumlah_proyek} file terverifikasi</Text>
-              {(p.figma.files || []).map((f) => <Text key={f.key} style={s.redup}>• {f.name}</Text>)}
-              <Tombol title="Putuskan" variant="bahaya" disabled={busy} onPress={() => konfirmasi('Putuskan Figma', () => api.figmaPutus())} />
-            </Kartu>
-          ) : (
-            <Kartu>
-              <Text style={s.teks}>Buat Personal Access Token di pengaturan akun Figma. Token hanya dipakai sekali dan tidak disimpan.</Text>
-              <Text style={s.label}>Personal Access Token</Text>
-              <TextInput style={s.input} value={tokenFigma} onChangeText={setTokenFigma} secureTextEntry autoCapitalize="none"
-                editable={!busy} accessibilityLabel="Token Figma" />
-              <Text style={s.label}>Kunci file portofolio (pisahkan koma)</Text>
-              <TextInput style={s.input} value={fileKeys} onChangeText={setFileKeys} autoCapitalize="none" autoCorrect={false}
-                editable={!busy} placeholder="bagian URL figma.com/design/<KUNCI>/..." accessibilityLabel="Kunci file Figma" />
-              <Tombol title={busy ? 'Memproses...' : 'Hubungkan Figma'} disabled={busy}
-                onPress={() => {
-                  if (!tokenFigma.trim()) { setError('Token Figma wajib diisi'); return; }
-                  const keys = fileKeys.split(',').map((k) => k.trim()).filter(Boolean);
-                  aksi(async () => { await api.figmaHubungkan(tokenFigma.trim(), keys); setTokenFigma(''); }, 'Figma terhubung.');
-                }} />
-            </Kartu>
-          )}
-        </>
-      )}
+      {/* GitHub Section */}
+      <Text style={s.sub}>GitHub</Text>
+      <Kartu style={{ marginBottom: 16 }}>
+        {p?.github ? (
+          <View style={{ gap: 6 }}>
+            <Text style={[s.teks, { fontWeight: '700', color: c.primer }]}>Terhubung: @{p.github.username}</Text>
+            <Text style={s.teks}>{p.github.jumlah_repo} repositori · {p.github.jumlah_commit} commit</Text>
+            <Text style={s.redup}>Bahasa: {(p.github.top_languages || []).join(', ') || '-'}</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Tombol title="Sinkronkan" onPress={() => jalankan(async () => { await api.githubSinkron(); await d.reload(); })} disabled={busy} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Tombol title="Putuskan" variant="garis" onPress={() => jalankan(async () => { await api.githubPutus(); await d.reload(); })} disabled={busy} />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 8 }}>
+            <Text style={s.teks}>Tempel kode verifikasi berikut pada bio profil GitHub kamu:</Text>
+            <View style={{ backgroundColor: c.bgInfo, padding: 12, borderRadius: 12 }}>
+              <Text selectable style={{ fontFamily: font.serif, fontSize: 16, fontWeight: '700', color: c.primer }}>
+                {chal.data?.kode || 'Memuat kode...'}
+              </Text>
+            </View>
+            <TextInput
+              style={s.input}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Username GitHub kamu"
+              placeholderTextColor="#8F817B"
+              autoCapitalize="none"
+              editable={!busy}
+            />
+            <Tombol
+              title="Hubungkan GitHub"
+              onPress={() => jalankan(async () => { await api.githubHubungkan(username.trim()); await d.reload(); })}
+              disabled={busy || !username.trim()}
+            />
+          </View>
+        )}
+      </Kartu>
+
+      {/* Figma Section */}
+      <Text style={s.sub}>Figma</Text>
+      <Kartu style={{ marginBottom: 20 }}>
+        {p?.figma ? (
+          <View style={{ gap: 6 }}>
+            <Text style={[s.teks, { fontWeight: '700', color: c.primer }]}>Terhubung: @{p.figma.username_figma}</Text>
+            <Text style={s.teks}>{p.figma.jumlah_proyek} file proyek</Text>
+            {(p.figma.files || []).map((f) => (
+              <Text key={f.key} style={s.redup}>• {f.name}</Text>
+            ))}
+            <Tombol title="Putuskan Figma" variant="garis" onPress={() => jalankan(async () => { await api.figmaPutus(); await d.reload(); })} disabled={busy} />
+          </View>
+        ) : (
+          <View style={{ gap: 8 }}>
+            <Text style={s.redup}>Token akses Figma hanya dipakai sekali untuk verifikasi dan tidak disimpan di server.</Text>
+            <TextInput
+              style={s.input}
+              value={tokenFigma}
+              onChangeText={setTokenFigma}
+              placeholder="Personal Access Token Figma (figd_...)"
+              placeholderTextColor="#8F817B"
+              secureTextEntry
+              editable={!busy}
+            />
+            <TextInput
+              style={s.input}
+              value={keysFigma}
+              onChangeText={setKeysFigma}
+              placeholder="File key (pisahkan dengan koma jika lebih dari satu)"
+              placeholderTextColor="#8F817B"
+              editable={!busy}
+            />
+            <Tombol
+              title="Hubungkan Figma"
+              onPress={() =>
+                jalankan(async () => {
+                  const arr = keysFigma.split(',').map((x) => x.trim()).filter(Boolean);
+                  await api.figmaHubungkan(tokenFigma.trim(), arr);
+                  await d.reload();
+                })
+              }
+              disabled={busy || !tokenFigma.trim() || !keysFigma.trim()}
+            />
+          </View>
+        )}
+      </Kartu>
+
+      <Galat pesan={error} />
     </Halaman>
   );
 }
