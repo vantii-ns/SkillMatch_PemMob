@@ -457,7 +457,9 @@ export function TimDetailScreen({ route, navigation }) {
 
 // US-09 — ruang diskusi tim (polling tiap 4 detik, hanya pesan baru yang diambil)
 export function DiskusiScreen({ route, navigation }) {
-  const { id, nama } = route.params;
+  const idRaw = route.params?.id ?? route.params?.id_tim;
+  const id = idRaw ? Number(idRaw) : null;
+  const nama = route.params?.nama || 'Diskusi Tim';
   const { user } = useAuth();
   const [pesan, setPesan] = useState([]);
   const [teks, setTeks] = useState('');
@@ -468,12 +470,16 @@ export function DiskusiScreen({ route, navigation }) {
   const tarikRef = useRef(null);
 
   // Ambil data tim untuk header info anggota
-  const timData = useData(`tim:${id}`, () => api.timDetail(id));
+  const timData = useData(id ? `tim:${id}` : null, () => (id ? api.timDetail(id) : null));
   const t = timData.data;
   const namaAnggota = (t?.anggota || []).slice(0, 3).map((a) => a.nama.split(' ')[0]).join(', ');
   const anggotaKeterangan = t ? `${namaAnggota} · ${t.anggota.length} anggota` : '';
 
   useEffect(() => {
+    if (!id || Number.isNaN(id)) {
+      setGalatTarik('ID tim tidak ditemukan');
+      return;
+    }
     let aktif = true;
     let jalan = false;
 

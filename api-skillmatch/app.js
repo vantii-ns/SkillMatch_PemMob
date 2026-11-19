@@ -33,7 +33,7 @@ app.use(cors({
     if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     cb(new Error(`Origin '${origin}' tidak diizinkan oleh CORS`));
   },
-  exposedHeaders: ['X-Total-Count', 'X-Request-Id'],
+  exposedHeaders: ['X-Total-Count', 'X-Request-Id', 'X-Belum-Dibaca'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400, // Cache preflight 24 jam
@@ -63,6 +63,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(batas(300));                          // Global: 300 req / 15 menit
   app.use('/auth/login', batas(20));            // Login: 20 percobaan / 15 menit (anti brute-force)
   app.use('/auth/register', batas(5));          // Register: 5 req / 15 menit (anti spam akun)
+  app.use('/auth/lupa-password', batas(5));     // Lupa password: 5 req / 15 menit (anti abuse)
   app.use('/auth', batas(20));                  // Auth lainnya: 20 req / 15 menit
   app.use('/portofolio/github', batas(15));     // GitHub sync: 15 req / 15 menit
 }

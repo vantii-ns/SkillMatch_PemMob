@@ -1,17 +1,19 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { useNotifikasi, notifikasiNavRef } from './NotifikasiContext';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './AuthContext';
 import { c, radius } from './theme';
 import { IconBox, IconSearch, IconUser, IconUsers, SkillMatchLogo } from './icons';
-import { LoginScreen, RegisterScreen } from './screens/Auth';
+import { LoginScreen, RegisterScreen, LupaPasswordScreen, VerifikasiKodeScreen, ResetPasswordScreen } from './screens/Auth';
 import { CariScreen, KandidatDetailScreen, UndangScreen } from './screens/Cari';
 import { DiskusiScreen, TimDetailScreen, TimFormScreen, TimListScreen } from './screens/Tim';
 import { KotakScreen } from './screens/Kotak';
 import { EditProfilScreen, PilihSkillScreen, PortofolioScreen, ProfilScreen } from './screens/Profil';
 
+export const navigationRef = createNavigationContainerRef();
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -157,7 +159,16 @@ export default function Navigasi() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        notifikasiNavRef.navigate = (name, params) => {
+          if (navigationRef.isReady()) {
+            navigationRef.navigate(name, params);
+          }
+        };
+      }}
+    >
       {token ? (
         <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="Utama" component={Tabs} />
@@ -174,6 +185,9 @@ export default function Navigasi() {
         <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="LupaPassword" component={LupaPasswordScreen} />
+          <Stack.Screen name="VerifikasiKode" component={VerifikasiKodeScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

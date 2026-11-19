@@ -149,6 +149,19 @@ router.post('/:id/diskusi', tangani(async (req, res) => {
   const isi = teks(req.body?.isi_pesan, 'isi_pesan', { max: 2000 });
   const [h] = await pool.query('INSERT INTO diskusi (id_tim, id_users, isi_pesan) VALUES (?, ?, ?)',
     [tim.id_tim, req.userId, isi]);
+
+  // Notifikasi ke anggota tim lain (kecuali pengirim)
+  const [[pengirim]] = await pool.query('SELECT nama FROM users WHERE id_users = ?', [req.userId]);
+  const [anggota] = await pool.query(
+    'SELECT id_users FROM anggota_tim WHERE id_tim = ? AND id_users <> ?',
+    [tim.id_tim, req.userId]);
+  const ringkas = isi.length > 80 ? isi.slice(0, 80) + '…' : isi;
+  for (const a of anggota) {
+    await buatNotifikasi(a.id_users, 'pesan_diskusi',
+      `${pengirim.nama} di tim "${tim.nama_tim}": ${ringkas}`,
+      { id_tim: tim.id_tim, id_diskusi: h.insertId });
+  }
+
   res.status(201).json({ id_diskusi: h.insertId, id_users: req.userId, isi_pesan: isi });
 }));
 

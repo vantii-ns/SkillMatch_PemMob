@@ -52,6 +52,9 @@ export const api = {
   // Auth & profil (M1)
   login: (email, password) => request('/auth/login', kirim('POST', { email, password })),
   register: (body) => request('/auth/register', kirim('POST', body)),
+  lupaPassword: (email) => request('/auth/lupa-password', kirim('POST', { email })),
+  verifikasiKode: (email, kode) => request('/auth/verifikasi-kode', kirim('POST', { email, kode })),
+  resetPassword: (token_reset, password_baru) => request('/auth/reset-password', kirim('POST', { token_reset, password_baru })),
   me: () => request('/auth/me'),
   ubahProfil: (body) => request('/users/me', kirim('PUT', body)),
   setSkills: (skill_ids) => request('/users/me/skills', kirim('PUT', { skill_ids })),

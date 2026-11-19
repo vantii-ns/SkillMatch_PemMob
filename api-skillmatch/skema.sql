@@ -107,6 +107,17 @@ CREATE TABLE notifikasi (
   FOREIGN KEY (id_users) REFERENCES users(id_users) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE reset_password (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_users INT NOT NULL,
+  kode VARCHAR(100) NOT NULL,
+  kedaluwarsa DATETIME NOT NULL,
+  digunakan BOOLEAN NOT NULL DEFAULT FALSE,
+  dibuat_pada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_reset_user (id_users),
+  FOREIGN KEY (id_users) REFERENCES users(id_users) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 -- ===== Data awal =====
 INSERT INTO skills (nama, kategori) VALUES
  ('JavaScript','pemrograman'),('TypeScript','pemrograman'),('Python','pemrograman'),

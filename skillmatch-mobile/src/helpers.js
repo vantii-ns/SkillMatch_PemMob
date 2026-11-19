@@ -25,6 +25,13 @@ export function validasiTim(nama) {
   return '';
 }
 
+export function validasiResetPassword(password) {
+  if (!password) return 'Password baru wajib diisi';
+  if (password.length < 8) return 'Password baru minimal 8 karakter';
+  if (password.length > 72) return 'Password baru maksimal 72 karakter';
+  return '';
+}
+
 export function tanggalLokal(value) {
   if (!value) return '-';
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.split('-').reverse().join('/');

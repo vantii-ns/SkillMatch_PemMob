@@ -40,6 +40,10 @@ export function IconUsers({ size = 20, color = c.primer }) {
   return <Feather name="users" size={size} color={color} />;
 }
 
+export function IconBell({ size = 20, color = c.primer }) {
+  return <Feather name="bell" size={size} color={color} />;
+}
+
 export function IconBox({ size = 20, color = c.primer }) {
   return <Feather name="inbox" size={size} color={color} />;
 }

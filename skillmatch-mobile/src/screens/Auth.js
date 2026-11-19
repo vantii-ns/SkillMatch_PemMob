@@ -3,10 +3,12 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { Chip, Galat, Halaman, InfoBox, Tombol } from '../components';
 import { useAuth } from '../AuthContext';
 import { useAksi } from '../hooks';
-import { PERAN, validasiLogin, validasiRegister } from '../helpers';
+import { PERAN, validasiLogin, validasiRegister, validasiResetPassword } from '../helpers';
+import { api } from '../api';
 import { c, font, radius, s } from '../theme';
 import {
   IconBack,
+  IconCheck,
   IconEye,
   IconEyeOff,
   IconInfo,
@@ -159,6 +161,15 @@ export function LoginScreen({ navigation }) {
             </Pressable>
           </View>
         </View>
+      </View>
+
+      {/* Tautan Lupa Kata Sandi */}
+      <View style={{ alignItems: 'flex-end', marginTop: 8 }}>
+        <Pressable onPress={() => navigation.navigate('LupaPassword')} hitSlop={8}>
+          <Text style={{ color: c.primer, fontWeight: '600', fontSize: 13.5 }}>
+            Lupa kata sandi?
+          </Text>
+        </Pressable>
       </View>
 
       <Galat pesan={error} />
@@ -363,6 +374,321 @@ export function RegisterScreen({ navigation }) {
           </Text>
         </Pressable>
       </View>
+    </Halaman>
+  );
+}
+
+
+export function LupaPasswordScreen({ navigation }) {
+  const [email, setEmail] = useState('');
+  const { busy, error, setError, jalankan } = useAksi();
+
+  async function kirim() {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError('Format email tidak valid');
+      return;
+    }
+    await jalankan(async () => {
+      await api.lupaPassword(email.trim());
+      navigation.navigate('VerifikasiKode', { email: email.trim() });
+    });
+  }
+
+  return (
+    <Halaman>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 16 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+          <IconBack size={24} color={c.primer} />
+        </Pressable>
+        <SkillMatchWordmark width={130} height={30} />
+      </View>
+
+      <Text style={s.subKategori}>LUPA KATA SANDI</Text>
+      <Text style={[s.judulSerif, { fontSize: 24, marginBottom: 8 }]}>
+        Atur ulang kata sandimu.
+      </Text>
+      <Text style={[s.keterangan, { marginBottom: 16 }]}>
+        Masukkan email yang terdaftar. Kami akan mengirimkan kode verifikasi 6 digit untuk mengatur ulang kata sandimu.
+      </Text>
+
+      <View>
+        <Text style={s.label}>Email</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: c.putih,
+            borderWidth: 1.2,
+            borderColor: c.garisGelap,
+            borderRadius: radius.input,
+            paddingHorizontal: 16,
+          }}
+        >
+          <TextInput
+            style={{ flex: 1, paddingVertical: 13, fontSize: 15, color: c.teks }}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholder="nabila.putri@kampus.ac.id"
+            placeholderTextColor={c.redup}
+          />
+          <IconMail size={18} color="#A78E75" />
+        </View>
+      </View>
+
+      <Galat pesan={error} />
+
+      <Tombol
+        judul="→ Kirim kode verifikasi"
+        onPress={kirim}
+        loading={busy}
+        style={{ marginTop: 18 }}
+      />
+
+      <View style={{ alignItems: 'center', marginTop: 16, gap: 6 }}>
+        <Pressable onPress={() => navigation.navigate('Login')}>
+          <Text style={{ color: c.primer, fontWeight: '700', fontSize: 15 }}>
+            Kembali ke halaman masuk
+          </Text>
+        </Pressable>
+      </View>
+    </Halaman>
+  );
+}
+
+export function VerifikasiKodeScreen({ navigation, route }) {
+  const email = route.params?.email || '';
+  const [kode, setKode] = useState('');
+  const { busy, error, setError, jalankan } = useAksi();
+
+  async function verifikasi() {
+    if (kode.trim().length !== 6) {
+      setError('Masukkan 6 digit kode verifikasi');
+      return;
+    }
+    await jalankan(async () => {
+      const res = await api.verifikasiKode(email, kode.trim());
+      navigation.navigate('ResetPassword', { token_reset: res.token_reset });
+    });
+  }
+
+  return (
+    <Halaman>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 16 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+          <IconBack size={24} color={c.primer} />
+        </Pressable>
+        <SkillMatchWordmark width={130} height={30} />
+      </View>
+
+      <Text style={s.subKategori}>VERIFIKASI KODE</Text>
+      <Text style={[s.judulSerif, { fontSize: 24, marginBottom: 8 }]}>
+        Masukkan kode verifikasi.
+      </Text>
+      <Text style={[s.keterangan, { marginBottom: 16 }]}>
+        Kode 6 digit telah dikirim ke {email}. Kode berlaku selama 15 menit.
+      </Text>
+
+      <View>
+        <Text style={s.label}>Kode verifikasi (OTP)</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: c.putih,
+            borderWidth: 1.2,
+            borderColor: c.garisGelap,
+            borderRadius: radius.input,
+            paddingHorizontal: 16,
+          }}
+        >
+          <TextInput
+            style={{
+              flex: 1,
+              paddingVertical: 13,
+              fontSize: 22,
+              color: c.teks,
+              letterSpacing: 8,
+              textAlign: 'center',
+              fontWeight: '700',
+            }}
+            value={kode}
+            onChangeText={setKode}
+            keyboardType="number-pad"
+            maxLength={6}
+            placeholder="••••••"
+            placeholderTextColor={c.redup}
+          />
+        </View>
+      </View>
+
+      <Galat pesan={error} />
+
+      <Tombol
+        judul="→ Verifikasi kode"
+        onPress={verifikasi}
+        loading={busy}
+        style={{ marginTop: 18 }}
+      />
+
+      <InfoBox
+        teks="Jika di mode development/pengujian, periksa console log server untuk melihat kode OTP."
+        style={{ marginTop: 16 }}
+      />
+    </Halaman>
+  );
+}
+
+export function ResetPasswordScreen({ navigation, route }) {
+  const tokenReset = route.params?.token_reset;
+  const [password, setPassword] = useState('');
+  const [konfirmasi, setKonfirmasi] = useState('');
+  const [lihatPass, setLihatPass] = useState(false);
+  const [lihatKonfirmasi, setLihatKonfirmasi] = useState(false);
+  const [sukses, setSukses] = useState(false);
+  const { busy, error, setError, jalankan } = useAksi();
+
+  async function reset() {
+    const pesan = validasiResetPassword(password);
+    if (pesan) {
+      setError(pesan);
+      return;
+    }
+    if (password !== konfirmasi) {
+      setError('Konfirmasi kata sandi tidak cocok');
+      return;
+    }
+    await jalankan(async () => {
+      await api.resetPassword(tokenReset, password);
+      setSukses(true);
+    });
+  }
+
+  if (sukses) {
+    return (
+      <Halaman>
+        <View style={{ alignItems: 'center', marginTop: 60, gap: 16 }}>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: c.primer,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <IconCheck size={32} color={c.putih} />
+          </View>
+          <Text style={[s.judulSerif, { fontSize: 24, textAlign: 'center' }]}>
+            Kata sandi berhasil direset!
+          </Text>
+          <Text style={[s.keterangan, { textAlign: 'center', maxWidth: 280 }]}>
+            Kata sandimu telah berhasil diperbarui. Silakan masuk kembali menggunakan kata sandi baru.
+          </Text>
+          <Tombol
+            judul="→ Masuk sekarang"
+            onPress={() => navigation.navigate('Login')}
+            style={{ marginTop: 12, minWidth: 200 }}
+          />
+        </View>
+      </Halaman>
+    );
+  }
+
+  return (
+    <Halaman>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 16 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+          <IconBack size={24} color={c.primer} />
+        </Pressable>
+        <SkillMatchWordmark width={130} height={30} />
+      </View>
+
+      <Text style={s.subKategori}>KATA SANDI BARU</Text>
+      <Text style={[s.judulSerif, { fontSize: 24, marginBottom: 8 }]}>
+        Buat kata sandi baru.
+      </Text>
+      <Text style={[s.keterangan, { marginBottom: 16 }]}>
+        Pastikan kata sandi barumu kuat dan memiliki minimal 8 karakter.
+      </Text>
+
+      <View style={{ gap: 14 }}>
+        <View>
+          <Text style={s.label}>Kata sandi baru</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: c.putih,
+              borderWidth: 1.2,
+              borderColor: c.garisGelap,
+              borderRadius: radius.input,
+              paddingHorizontal: 16,
+            }}
+          >
+            <TextInput
+              style={{ flex: 1, paddingVertical: 13, fontSize: 15, color: c.teks }}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!lihatPass}
+              placeholder="••••••••••"
+              placeholderTextColor={c.redup}
+            />
+            <Pressable onPress={() => setLihatPass(!lihatPass)} hitSlop={10}>
+              {lihatPass ? (
+                <IconEye size={18} color="#A78E75" />
+              ) : (
+                <IconEyeOff size={18} color="#A78E75" />
+              )}
+            </Pressable>
+          </View>
+          <Text style={{ fontSize: 12.5, color: c.redup, marginTop: 4 }}>
+            Gunakan minimal 8 karakter.
+          </Text>
+        </View>
+
+        <View>
+          <Text style={s.label}>Konfirmasi kata sandi</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: c.putih,
+              borderWidth: 1.2,
+              borderColor: c.garisGelap,
+              borderRadius: radius.input,
+              paddingHorizontal: 16,
+            }}
+          >
+            <TextInput
+              style={{ flex: 1, paddingVertical: 13, fontSize: 15, color: c.teks }}
+              value={konfirmasi}
+              onChangeText={setKonfirmasi}
+              secureTextEntry={!lihatKonfirmasi}
+              placeholder="••••••••••"
+              placeholderTextColor={c.redup}
+            />
+            <Pressable onPress={() => setLihatKonfirmasi(!lihatKonfirmasi)} hitSlop={10}>
+              {lihatKonfirmasi ? (
+                <IconEye size={18} color="#A78E75" />
+              ) : (
+                <IconEyeOff size={18} color="#A78E75" />
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      <Galat pesan={error} />
+
+      <Tombol
+        judul="→ Simpan kata sandi baru"
+        onPress={reset}
+        loading={busy}
+        style={{ marginTop: 18 }}
+      />
     </Halaman>
   );
 }
