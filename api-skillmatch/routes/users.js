@@ -92,6 +92,27 @@ router.get('/search', tangani(async (req, res) => {
        WHERE us.id_users IN (?) ORDER BY us.status_verifikasi DESC, s.nama`, [rows.map((r) => r.id_users)]);
     for (const s of sk) { const { id_users, ...isi } = s; peta.get(id_users).push(isi); }
   }
+  // Cek status undangan & keanggotaan kandidat di tim user saat ini
+  const statusPeta = new Map();
+  if (rows.length) {
+    // Tim yang dipimpin user saat ini
+    const [timKetua] = await pool.query('SELECT id_tim FROM tim WHERE id_users = ?', [req.userId]);
+    if (timKetua.length) {
+      const timIds = timKetua.map((t) => t.id_tim);
+      // Cek apakah kandidat sudah jadi anggota di salah satu tim user
+      const [anggotaRows] = await pool.query(
+        'SELECT DISTINCT id_users FROM anggota_tim WHERE id_tim IN (?) AND id_users IN (?)',
+        [timIds, rows.map((r) => r.id_users)]
+      );
+      for (const a of anggotaRows) statusPeta.set(a.id_users, 'anggota');
+      // Cek apakah kandidat sudah diundang (menunggu) di salah satu tim user
+      const [undanganRows] = await pool.query(
+        "SELECT DISTINCT id_users FROM undangan WHERE id_tim IN (?) AND id_users IN (?) AND status = 'menunggu'",
+        [timIds, rows.map((r) => r.id_users)]
+      );
+      for (const u of undanganRows) if (!statusPeta.has(u.id_users)) statusPeta.set(u.id_users, 'diundang');
+    }
+  }
   res.set('X-Total-Count', String(total));
   res.json(rows.map((r) => {
     const gh = jsonAman(r.github_ringkasan, {}); const fg = jsonAman(r.figma_ringkasan, {});
@@ -101,6 +122,7 @@ router.get('/search', tangani(async (req, res) => {
       github_username: r.github_username, jumlah_repo: gh.jumlah_repo ?? null, jumlah_commit: gh.jumlah_commit ?? null,
       figma_username: r.figma_username, jumlah_proyek_figma: fg.jumlah_proyek ?? null,
       skills: peta.get(r.id_users),
+      status_relasi: statusPeta.get(r.id_users) || null,
     };
   }));
 }));

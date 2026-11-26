@@ -1,6 +1,6 @@
 // F1, F2, F3 — profil, tag skill, hubungkan GitHub & Figma (Figma Profil)
 import { useState } from 'react';
-import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { AvatarInitials, Chip, Galat, Halaman, HeaderLayar, InfoBox, Kartu, SkillChips, Status, Tombol } from '../components';
 import { PeranPilihan } from './Auth';
 import { useAuth } from '../AuthContext';
@@ -8,10 +8,11 @@ import { useAksi, useData } from '../hooks';
 import { api } from '../api';
 import { labelPeran, tanggalLokal } from '../helpers';
 import { c, font, radius, s } from '../theme';
-import { IconCheck, IconChevronRight, IconClock, IconEdit, IconLink, IconLogOut } from '../icons';
+import { IconCheck, IconChevronRight, IconClock, IconEdit, IconExternalLink, IconLink, IconLogOut } from '../icons';
 
 export function ProfilScreen({ navigation }) {
-  const { logout } = useAuth();
+  const { logout, segarkanUser } = useAuth();
+  const { busy: busyStatus, jalankan: jalankanStatus } = useAksi();
   const d = useData('saya', () => api.me());
   const tim = useData('tim', () => api.timSaya());
   const p = d.data;
@@ -58,6 +59,34 @@ export function ProfilScreen({ navigation }) {
               {ketuaCount > 0 ? `KETUA · ${timList.find((t) => t.peran_saya === 'Ketua')?.nama_tim || ''}` : 'ANGGOTA TIM'}
             </Text>
           )}
+
+          {/* Quick Toggle Status Available */}
+          <Kartu style={[s.pemisah, { marginBottom: 16, paddingVertical: 12 }]}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: c.teks }}>
+                Status Available
+              </Text>
+              <Text style={[s.redup, { fontSize: 12.5, marginTop: 2 }]}>
+                {p.ketersediaan
+                  ? 'Aktif · Dapat ditemukan dan diundang ke tim.'
+                  : 'Nonaktif · Sedang sibuk dan tidak dapat diundang.'}
+              </Text>
+            </View>
+            <Switch
+              value={!!p.ketersediaan}
+              onValueChange={(val) =>
+                jalankanStatus(async () => {
+                  await api.ubahProfil({ ketersediaan: val });
+                  await d.reload();
+                  await segarkanUser().catch(() => {});
+                })
+              }
+              disabled={busyStatus}
+              trackColor={{ false: '#D1C4B5', true: c.primer }}
+              thumbColor={c.putih}
+              accessibilityLabel="Status Available"
+            />
+          </Kartu>
 
           {/* Kartu: Tentang Saya */}
           <Kartu style={{ marginBottom: 16 }}>
@@ -314,7 +343,16 @@ export function PortofolioScreen({ navigation }) {
       <Kartu style={{ marginBottom: 16 }}>
         {p?.github ? (
           <View style={{ gap: 6 }}>
-            <Text style={[s.teks, { fontWeight: '700', color: c.primer }]}>Terhubung: @{p.github.username}</Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(`https://github.com/${p.github.username}`)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <Text style={[s.teks, { fontWeight: '700', color: c.primer, textDecorationLine: 'underline' }]}>
+                Terhubung: @{p.github.username}
+              </Text>
+              <IconExternalLink size={16} color={c.primer} />
+            </Pressable>
             <Text style={s.teks}>{p.github.jumlah_repo} repositori · {p.github.jumlah_commit} commit</Text>
             <Text style={s.redup}>Bahasa: {(p.github.top_languages || []).join(', ') || '-'}</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
@@ -360,7 +398,10 @@ export function PortofolioScreen({ navigation }) {
             <Text style={[s.teks, { fontWeight: '700', color: c.primer }]}>Terhubung: @{p.figma.username_figma}</Text>
             <Text style={s.teks}>{p.figma.jumlah_proyek} file proyek</Text>
             {(p.figma.files || []).map((f) => (
-              <Text key={f.key} style={s.redup}>• {f.name}</Text>
+              <Pressable key={f.key} accessibilityRole="link" onPress={() => Linking.openURL(`https://www.figma.com/file/${f.key}`)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 }}>
+                <Text style={[s.redup, { color: c.primer, textDecorationLine: 'underline', flex: 1 }]}>• {f.name}</Text>
+                <IconExternalLink size={14} color={c.primer} />
+              </Pressable>
             ))}
             <Tombol title="Putuskan Figma" variant="garis" onPress={() => jalankan(async () => { await api.figmaPutus(); await d.reload(); })} disabled={busy} />
           </View>
@@ -380,7 +421,7 @@ export function PortofolioScreen({ navigation }) {
               style={s.input}
               value={keysFigma}
               onChangeText={setKeysFigma}
-              placeholder="File key (pisahkan dengan koma jika lebih dari satu)"
+              placeholder="File key atau URL Figma (pisahkan dengan koma)"
               placeholderTextColor="#8F817B"
               editable={!busy}
             />
@@ -388,8 +429,10 @@ export function PortofolioScreen({ navigation }) {
               title="Hubungkan Figma"
               onPress={() =>
                 jalankan(async () => {
-                  const arr = keysFigma.split(',').map((x) => x.trim()).filter(Boolean);
+                  const arr = keysFigma.split(',').map((x) => { const m = x.trim().match(/figma\.com\/(?:file|design|proto|board)\/([a-zA-Z0-9]+)/); return m ? m[1] : x.trim(); }).filter(Boolean);
                   await api.figmaHubungkan(tokenFigma.trim(), arr);
+                  setTokenFigma('');
+                  setKeysFigma('');
                   await d.reload();
                 })
               }

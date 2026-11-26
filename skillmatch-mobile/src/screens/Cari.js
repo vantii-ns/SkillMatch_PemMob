@@ -1,6 +1,6 @@
 // F4 / US-04 — pencarian & filter kandidat; US-07, US-11 — profil kandidat dengan bukti portofolio; US-05 — undang ke tim
 import { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Linking, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { AvatarInitials, Chip, Galat, Halaman, HeaderLayar, InfoBox, Kartu, SkillChips, Status, Tombol } from '../components';
 import { useAuth } from '../AuthContext';
 import { useAksi, useData } from '../hooks';
@@ -26,7 +26,8 @@ import {
 const FILTER_PERAN = [['', 'Semua'], ['developer', 'Developer'], ['desainer', 'Desainer'], ['lainnya', 'Lainnya']];
 const KOSONG = { q: '', peran: '', tersedia: false, verified: false, skill: [] };
 
-export function CariScreen({ navigation }) {
+export function CariScreen({ route, navigation }) {
+  const targetTim = route?.params?.targetTim || null;
   const { user } = useAuth();
   const [draft, setDraft] = useState(KOSONG);
   const [kriteria, setKriteria] = useState(KOSONG);
@@ -117,6 +118,19 @@ export function CariScreen({ navigation }) {
         )}
       </View>
 
+      {targetTim && (
+        <View style={{ paddingHorizontal: 18, marginBottom: 8 }}>
+          <View style={[s.banner, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FDF2F2', borderColor: c.primer }]}>
+            <Text style={[s.teks, { fontSize: 13.5, flex: 1 }]}>
+              Mengundang untuk tim: <Text style={{ fontWeight: '700', color: c.primer }}>{targetTim.nama_tim}</Text>
+            </Text>
+            <Pressable onPress={() => navigation.setParams({ targetTim: undefined })}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: c.primer }}>Batal</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <Status loading={hasil.loading} error={hasil.error} stale={hasil.stale} adaData={!!hasil.data} onRetry={hasil.reload} />
 
       <FlatList
@@ -146,8 +160,9 @@ export function CariScreen({ navigation }) {
         }
         renderItem={({ item }) => (
           <Kartu
-            onPress={() => navigation.navigate('KandidatDetail', { id: item.id_users, nama: item.nama, kandidat: item })}
-            style={{ marginBottom: 12 }}
+            disabled={item.status_relasi === 'anggota'}
+            onPress={() => navigation.navigate('KandidatDetail', { id: item.id_users, nama: item.nama, kandidat: item, targetTim })}
+            style={{ marginBottom: 12, opacity: item.status_relasi === 'anggota' ? 0.68 : 1 }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <AvatarInitials nama={item.nama} size={52} />
@@ -166,6 +181,23 @@ export function CariScreen({ navigation }) {
                 </View>
               </View>
             </View>
+
+            {item.status_relasi === 'anggota' && (
+              <View style={{ marginTop: 8 }}>
+                <View style={{ backgroundColor: '#6B7280', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <IconCheck size={12} color={c.putih} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: c.putih }}>Sudah dalam tim</Text>
+                </View>
+              </View>
+            )}
+            {item.status_relasi === 'diundang' && (
+              <View style={{ marginTop: 8 }}>
+                <View style={{ backgroundColor: '#D97706', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <IconClock size={12} color={c.putih} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: c.putih }}>Sudah diundang · Menunggu respons</Text>
+                </View>
+              </View>
+            )}
 
             {item.skills && item.skills.length > 0 && (
               <View style={{ marginTop: 10 }}>
@@ -272,7 +304,7 @@ export function CariScreen({ navigation }) {
 }
 
 export function KandidatDetailScreen({ route, navigation }) {
-  const { id } = route.params;
+  const { id, kandidat, targetTim } = route.params;
   const d = useData(`kandidat:${id}`, () => api.kandidat(id));
   const p = d.data;
 
@@ -369,10 +401,10 @@ export function KandidatDetailScreen({ route, navigation }) {
                   Lencana hanya menunjukkan bahasa ditemukan di repositori publik, bukan tingkat keahlian. Jumlah commit adalah estimasi.
                 </Text>
 
-                <View style={{ marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderColor: c.garis, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`https://github.com/${p.github.username}`)} style={{ marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderColor: c.garis, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Text style={{ color: c.primer, fontWeight: '700', fontSize: 14 }}>Lihat profil GitHub</Text>
                   <IconExternalLink size={16} color={c.primer} />
-                </View>
+                </Pressable>
               </View>
             ) : (
               <Text style={s.redup}>Belum terhubung ke GitHub.</Text>
@@ -404,13 +436,14 @@ export function KandidatDetailScreen({ route, navigation }) {
             )}
           </Kartu>
 
-          <InfoBox teks="Data ilustratif. Integrasi Figma belum diuji pada aplikasi." style={{ marginBottom: 18 }} />
+          <View style={{ marginBottom: 6 }} />
 
           {/* Tombol Aksi Undang */}
           <Tombol
-            title="Undang ke tim"
+            title={kandidat?.status_relasi === 'anggota' ? 'Sudah dalam tim' : kandidat?.status_relasi === 'diundang' ? 'Sudah diundang' : !p.ketersediaan ? 'Tidak dapat diundang (non-available)' : 'Undang ke tim'}
+            disabled={kandidat?.status_relasi === 'anggota' || kandidat?.status_relasi === 'diundang' || !p.ketersediaan}
             icon={<IconUserPlus size={18} color={c.putih} />}
-            onPress={() => navigation.navigate('Undang', { id: p.id_users, nama: p.nama, kandidat: p })}
+            onPress={() => navigation.navigate('Undang', { id: p.id_users, nama: p.nama, kandidat: p, targetTim })}
           />
         </View>
       )}
@@ -420,9 +453,9 @@ export function KandidatDetailScreen({ route, navigation }) {
 
 // US-05 — pilih tim (sebagai ketua) lalu kirim undangan (Gambar 4 Figma)
 export function UndangScreen({ route, navigation }) {
-  const { id, nama, kandidat } = route.params;
+  const { id, nama, kandidat, targetTim } = route.params;
   const tim = useData('tim', () => api.timSaya());
-  const [idTim, setIdTim] = useState(null);
+  const [idTim, setIdTim] = useState(targetTim?.id_tim ?? null);
   const [peran, setPeran] = useState('Developer');
   const [customPeran, setCustomPeran] = useState('');
   const { busy, error, setError, jalankan } = useAksi();
@@ -430,8 +463,11 @@ export function UndangScreen({ route, navigation }) {
   const milikku = (tim.data || []).filter((t) => t.peran_saya === 'Ketua');
 
   // Set default team otomatis ke tim pertama yang dipimpin jika belum dipilih
-  const timTerpilih = (tim.data || []).find((t) => t.id_tim === (idTim ?? milikku[0]?.id_tim));
-  const activeIdTim = idTim ?? milikku[0]?.id_tim;
+  const activeIdTim = targetTim?.id_tim ?? idTim ?? milikku[0]?.id_tim;
+  const timTerpilih = targetTim
+    ? ((tim.data || []).find((t) => t.id_tim === targetTim.id_tim) || targetTim)
+    : (tim.data || []).find((t) => t.id_tim === activeIdTim);
+
 
   const rolePills = ['Developer', 'Desainer', 'Lainnya'];
   const peranEfektif = peran === 'Lainnya' ? (customPeran.trim() || 'Anggota') : peran;
@@ -500,6 +536,21 @@ export function UndangScreen({ route, navigation }) {
       {/* Pilihan Tim Milikmu */}
       {milikku.length > 0 && (
         <View style={{ marginTop: 8 }}>
+          {targetTim ? (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: c.teks, marginBottom: 10 }}>
+                Mengundang ke tim
+              </Text>
+              <View style={[s.kartu, { borderWidth: 2, borderColor: c.primer, marginBottom: 10 }]}>
+                <View style={s.pemisah}>
+                  <Text style={[s.kartuJudul, { fontSize: 18 }]}>{targetTim.nama_tim}</Text>
+                  <IconCheckCircle size={22} color={c.primer} />
+                </View>
+                <Text style={[s.redup, { fontSize: 13.5, marginTop: 2 }]}>Tim sudah dipilih otomatis</Text>
+              </View>
+            </View>
+          ) : (
+          <>
           <Text style={{ fontSize: 16, fontWeight: '700', color: c.teks, marginBottom: 10 }}>
             Pilih tim milikmu
           </Text>
@@ -539,6 +590,9 @@ export function UndangScreen({ route, navigation }) {
               </Pressable>
             );
           })}
+
+          </>
+          )}
 
           {/* Peran Ditawarkan */}
           <Text style={{ fontSize: 16, fontWeight: '700', color: c.teks, marginTop: 14, marginBottom: 10 }}>

@@ -89,8 +89,9 @@ router.post('/:id/undangan', tangani(async (req, res) => {
   const tim = await wajibKetua(idValid(req.params.id), req.userId);
   const target = idValid(req.body?.id_users, 'id_users');
   const peran = teks(req.body?.peran_ditawarkan ?? 'Anggota', 'peran_ditawarkan', { max: 50 });
-  const [u] = await pool.query('SELECT 1 FROM users WHERE id_users = ?', [target]);
+  const [u] = await pool.query('SELECT ketersediaan FROM users WHERE id_users = ?', [target]);
   if (!u.length) throw new ErrorHttp(404, 'Pengguna yang diundang tidak ditemukan');
+  if (!u[0].ketersediaan) throw new ErrorHttp(400, 'Pengguna sedang tidak tersedia dan tidak menerima undangan saat ini');
   const [a] = await pool.query('SELECT 1 FROM anggota_tim WHERE id_tim = ? AND id_users = ?', [tim.id_tim, target]);
   if (a.length) throw new ErrorHttp(409, 'Pengguna sudah menjadi anggota tim');
   const [p] = await pool.query(

@@ -1,15 +1,16 @@
 // US-06 — undangan masuk (terima/tolak), US-10 — notifikasi (Kotak Figma)
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { AvatarInitials, Chip, Galat, HeaderLayar, Kartu, Status, StatusBadge, Tombol } from '../components';
 import { useAksi, useData } from '../hooks';
 import { api } from '../api';
 import { tanggalLokal, waktuSingkat } from '../helpers';
 import { c, font, radius, s } from '../theme';
-import { IconBox, IconCheck, IconMail, IconRefresh } from '../icons';
+import { IconBox, IconChat, IconCheck, IconChevronRight, IconMail, IconRefresh, IconUsers } from '../icons';
 
 export function KotakScreen({ navigation }) {
   const [tabAktif, setTabAktif] = useState('undangan'); // 'undangan' | 'notifikasi'
+  const [detailNotif, setDetailNotif] = useState(null);
   const dUndangan = useData('undangan', () => api.undanganMasuk());
   const dNotifikasi = useData('notifikasi', () => api.notifikasi());
   const { busy, error, jalankan } = useAksi();
@@ -264,15 +265,19 @@ export function KotakScreen({ navigation }) {
                 </View>
               ) : null
             }
-            renderItem={({ item: n }) => (
+            renderItem={({ item: n }) => {
+              const dataParsed = typeof n.data === 'string' ? (() => { try { return JSON.parse(n.data); } catch { return {}; } })() : (n.data || {});
+              return (
               <Kartu
-                onPress={() =>
-                  !n.status_dibaca &&
-                  jalankan(async () => {
-                    await api.bacaNotifikasi(n.id_notifikasi);
-                    await dNotifikasi.reload();
-                  })
-                }
+                onPress={() => {
+                  if (!n.status_dibaca) {
+                    jalankan(async () => {
+                      await api.bacaNotifikasi(n.id_notifikasi);
+                      await dNotifikasi.reload();
+                    });
+                  }
+                  setDetailNotif({ ...n, dataParsed });
+                }}
                 style={{
                   marginBottom: 10,
                   backgroundColor: n.status_dibaca ? c.putih : '#FBF7F0',
@@ -302,16 +307,100 @@ export function KotakScreen({ navigation }) {
                     >
                       {n.isi}
                     </Text>
-                    <Text style={[s.redup, { fontSize: 12, marginTop: 4 }]}>
-                      {waktuSingkat(n.waktu)}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                      <Text style={[s.redup, { fontSize: 12 }]}>
+                        {waktuSingkat(n.waktu)} · Ketuk untuk detail
+                      </Text>
+                      <IconChevronRight size={14} color={c.redup} />
+                    </View>
                   </View>
                 </View>
               </Kartu>
-            )}
+            ); }}
           />
         </View>
       )}
+
+      {/* Modal Detail Notifikasi */}
+      <Modal visible={!!detailNotif} animationType="slide" transparent onRequestClose={() => setDetailNotif(null)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }} onPress={() => setDetailNotif(null)}>
+          <Pressable style={{ backgroundColor: c.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 34 }} onPress={() => {}}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: c.garisGelap, alignSelf: 'center', marginBottom: 14 }} />
+            <Text style={[s.judulSerif, { fontSize: 20, marginBottom: 4 }]}>Detail notifikasi</Text>
+            <Text style={[s.redup, { fontSize: 12.5, marginBottom: 12 }]}>
+              {detailNotif ? `${tanggalLokal(detailNotif.waktu)} · ${waktuSingkat(detailNotif.waktu)}` : ''}
+            </Text>
+
+            <Kartu style={{ marginBottom: 14 }}>
+              <Text style={[s.teks, { lineHeight: 22, fontWeight: '600' }]}>{detailNotif?.isi}</Text>
+              <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderColor: c.garis, gap: 4 }}>
+                <Text style={[s.redup, { fontSize: 12.5 }]}>
+                  Kategori: {detailNotif?.jenis === 'undangan_tim' ? 'Undangan Tim' : detailNotif?.jenis === 'pesan_diskusi' ? 'Pesan Diskusi' : detailNotif?.jenis === 'kandidat_cocok' ? 'Kandidat Cocok' : detailNotif?.jenis === 'respons_undangan' ? 'Respons Undangan' : detailNotif?.jenis || '-'}
+                </Text>
+                <Text style={[s.redup, { fontSize: 12.5 }]}>
+                  Status: {detailNotif?.status_dibaca ? 'Sudah dibaca' : 'Baru'}
+                </Text>
+              </View>
+            </Kartu>
+
+            {detailNotif?.dataParsed?.id_tim && (
+              <View style={{ gap: 10 }}>
+                <Tombol
+                  title="Masuk ke Tim"
+                  icon={<IconUsers size={16} color={c.putih} />}
+                  onPress={() => {
+                    const idTim = detailNotif.dataParsed.id_tim;
+                    setDetailNotif(null);
+                    navigation.navigate('TimDetail', { id: idTim });
+                  }}
+                />
+                <Tombol
+                  title="Buka Room Chat"
+                  variant="garis"
+                  icon={<IconChat size={16} color={c.primer} />}
+                  onPress={() => {
+                    const idTim = detailNotif.dataParsed.id_tim;
+                    setDetailNotif(null);
+                    navigation.navigate('Diskusi', { id: idTim });
+                  }}
+                />
+              </View>
+            )}
+
+            {detailNotif?.jenis === 'undangan_tim' && (
+              <Tombol
+                title="Buka Tab Undangan"
+                variant="garis"
+                style={{ marginTop: 10 }}
+                onPress={() => {
+                  setDetailNotif(null);
+                  setTabAktif('undangan');
+                }}
+              />
+            )}
+
+            {detailNotif?.jenis === 'kandidat_cocok' && detailNotif?.dataParsed?.id_users && (
+              <Tombol
+                title="Lihat Profil Kandidat"
+                variant="garis"
+                style={{ marginTop: 10 }}
+                onPress={() => {
+                  const idUser = detailNotif.dataParsed.id_users;
+                  setDetailNotif(null);
+                  navigation.navigate('KandidatDetail', { id: idUser });
+                }}
+              />
+            )}
+
+            <Tombol
+              title="Tutup"
+              variant="garis"
+              style={{ marginTop: 10 }}
+              onPress={() => setDetailNotif(null)}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

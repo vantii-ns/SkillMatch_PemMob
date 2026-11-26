@@ -81,7 +81,7 @@ router.post('/figma', tangani(async (req, res) => {
   const token = teks(req.body?.token, 'token', { max: 200 });
   const keys = req.body?.file_keys ?? [];
   if (!Array.isArray(keys) || keys.length > 10) throw new ErrorHttp(400, 'file_keys harus array (maksimal 10)');
-  const d = await ambilFigma(token, keys.map((k) => teks(k, 'file_key', { max: 100 })));
+  const d = await ambilFigma(token, keys.map((k) => teks(k, 'file_key', { max: 500 })));
   if (keys.length && !d.ringkasan.files.length)
     throw new ErrorHttp(422, 'Tidak ada file Figma yang dapat diakses dengan token tersebut');
   await simpan(req.userId, 'figma', d);

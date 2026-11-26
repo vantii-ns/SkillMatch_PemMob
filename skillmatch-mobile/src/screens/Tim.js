@@ -272,7 +272,7 @@ export function TimDetailScreen({ route, navigation }) {
             {ketua && (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => navigation.navigate('Utama', { screen: 'Cari' })}
+                onPress={() => navigation.navigate('Utama', { screen: 'Cari', params: { targetTim: { id_tim: t.id_tim, nama_tim: t.nama_tim } } })}
               >
                 <Text style={{ fontSize: 14.5, fontWeight: '700', color: c.primer }}>Undang</Text>
               </Pressable>

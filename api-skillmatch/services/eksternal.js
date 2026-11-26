@@ -32,6 +32,12 @@ export async function ambilGithub(username) {
 }
 
 // ---------- Figma API ----------
+// Ekstrak file key dari URL Figma atau kembalikan string aslinya jika sudah berupa key
+function ekstrakFigmaKey(input) {
+  const m = input.match(/figma\.com\/(?:file|design|proto|board)\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : input.trim();
+}
+
 // Token pribadi dipakai sekali untuk verifikasi dan TIDAK disimpan (kebutuhan non-fungsional keamanan).
 export async function ambilFigma(token, fileKeys = []) {
   const h = { 'X-Figma-Token': token };
@@ -41,7 +47,8 @@ export async function ambilFigma(token, fileKeys = []) {
   const profil = await me.json();
 
   const files = [];
-  for (const key of fileKeys.slice(0, 10)) {
+  for (const rawKey of fileKeys.slice(0, 10)) {
+    const key = ekstrakFigmaKey(rawKey);
     const r = await ambil(`https://api.figma.com/v1/files/${encodeURIComponent(key)}?depth=1`, h);
     if (!r.ok) continue;
     const f = await r.json();
